@@ -1,0 +1,11 @@
+[package]
+name = "pingora-proxy-rs"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+async-trait = "0.1.86"
+pingora = { version = "0.4.0", features = ["lb"] }
+pingora-core = "0.4.0"
+pingora-load-balancing = "0.4.0"
+pingora-proxy = "0.4.0"
