@@ -3,8 +3,11 @@ use pingora::server::Server;
 use pingora_proxy::http_proxy_service;
 
 mod load_balancer;
+mod logging;
 
 fn main() {
+    logging::register_subscriber();
+
     let mut server = Server::new(None).expect("Failed to create server");
     server.bootstrap();
 
