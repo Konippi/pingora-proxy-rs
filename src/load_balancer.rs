@@ -9,14 +9,7 @@ use pingora::{
 use pingora_load_balancing::LoadBalancer;
 use pingora_proxy::{ProxyHttp, Session};
 
-pub struct LB(Arc<LoadBalancer<RoundRobin>>);
-
-impl LB {
-    pub fn new(upstreams: &[&str]) -> Self {
-        let upstream = LoadBalancer::try_from_iter(upstreams).unwrap();
-        Self(Arc::new(upstream))
-    }
-}
+pub struct LB(pub Arc<LoadBalancer<RoundRobin>>);
 
 #[async_trait]
 impl ProxyHttp for LB {
@@ -34,8 +27,8 @@ impl ProxyHttp for LB {
 
         tracing::info!("upstream peer: {:?}", upstream);
 
-        let peer = HttpPeer::new(upstream, true, "one.one.one.one".to_string());
-        Ok(Box::new(peer))
+        let peer = Box::new(HttpPeer::new(upstream, true, "one.one.one.one".to_string()));
+        Ok(peer)
     }
 
     async fn upstream_request_filter(
