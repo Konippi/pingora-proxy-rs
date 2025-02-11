@@ -1068,6 +1068,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "pingora-limits"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dfcc8e3afeae5a83bbcd415d8d3bb50bea31d2eda2a91f79220b59abab86dd0f"
+dependencies = [
+ "ahash",
+]
+
+[[package]]
 name = "pingora-load-balancing"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1160,6 +1169,7 @@ dependencies = [
  "async-trait",
  "pingora",
  "pingora-core",
+ "pingora-limits",
  "pingora-load-balancing",
  "pingora-proxy",
  "tracing",

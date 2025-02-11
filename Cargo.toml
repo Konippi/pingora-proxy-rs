@@ -7,6 +7,7 @@ edition = "2021"
 async-trait = "0.1.86"
 pingora = { version = "0.4.0", features = ["lb", "openssl"] }
 pingora-core = "0.4.0"
+pingora-limits = "0.4.0"
 pingora-load-balancing = "0.4.0"
 pingora-proxy = "0.4.0"
 tracing = "0.1.41"
