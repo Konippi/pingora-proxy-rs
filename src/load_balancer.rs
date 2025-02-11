@@ -65,10 +65,7 @@ impl ProxyHttp for LB {
         Ok(())
     }
 
-    async fn request_filter(&self, session: &mut Session, _ctx: &mut Self::CTX) -> Result<bool>
-    where
-        Self::CTX: Send + Sync,
-    {
+    async fn request_filter(&self, session: &mut Session, _ctx: &mut Self::CTX) -> Result<bool> {
         let appid = match self.get_request_appid(session) {
             None => return Ok(true),
             Some(appid) => appid,
