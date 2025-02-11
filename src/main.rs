@@ -25,6 +25,8 @@ fn main() {
     let background = background_service("health check", upstreams);
     let task = background.task();
 
+    server.add_service(background);
+
     let mut lb = http_proxy_service(&server.configuration, LB(task));
     lb.add_tcp("0.0.0.0:6188");
 
