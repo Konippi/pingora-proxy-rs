@@ -4,11 +4,17 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+anyhow = "1.0.95"
 async-trait = "0.1.86"
+opentelemetry = "0.28.0"
+opentelemetry-otlp = { version = "0.28.0", features = ["grpc-tonic", "logs"] }
+opentelemetry-semantic-conventions = "0.28.0"
+opentelemetry_sdk = { version = "0.28.0", features = ["rt-tokio"] }
 pingora = { version = "0.4.0", features = ["lb", "openssl"] }
 pingora-core = "0.4.0"
 pingora-limits = "0.4.0"
 pingora-load-balancing = "0.4.0"
 pingora-proxy = "0.4.0"
 tracing = "0.1.41"
+tracing-opentelemetry = "0.28.0"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }

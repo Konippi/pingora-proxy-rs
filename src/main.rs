@@ -8,11 +8,15 @@ use pingora::{
 use pingora_load_balancing::LoadBalancer;
 use pingora_proxy::http_proxy_service;
 
+mod config;
 mod load_balancer;
 mod logging;
+mod otel;
 
 fn main() {
     logging::register_subscriber();
+
+    otel::init(0.5).expect("Failed to initialize OpenTelemetry");
 
     let mut server = Server::new(None).expect("Failed to create server");
     server.bootstrap();
