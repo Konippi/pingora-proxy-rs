@@ -1,5 +1,6 @@
 use opentelemetry::{
     global::{self},
+    trace::TracerProvider,
     KeyValue,
 };
 use opentelemetry_otlp::{MetricExporter, SpanExporter, WithExportConfig};
@@ -14,7 +15,9 @@ use opentelemetry_semantic_conventions::{
 };
 use tracing_opentelemetry::MetricsLayer;
 use tracing_opentelemetry::OpenTelemetryLayer;
-use tracing_subscriber::{util::SubscriberInitExt, Registry};
+use tracing_subscriber::{
+    prelude::__tracing_subscriber_SubscriberExt, util::SubscriberInitExt, Registry,
+};
 
 use crate::config::CONFIG;
 
@@ -38,14 +41,16 @@ pub fn init(sampling_rate: f64) -> anyhow::Result<()> {
     let resource = build_resource();
 
     let tracer_provider = build_tracer_provider(&resource, sampling_rate)?;
-    let tracer = global::tracer("pingora-proxy-tracer");
-    let tracer_layer = OpenTelemetryLayer::new(tracer);
+    let tracer = tracer_provider.tracer(format!("{}-tracer", CONFIG.package_name));
+    let tracer_layer = OpenTelemetryLayer::<Registry, _>::new(tracer);
 
     let metrics_provider = build_metrics_provider(&resource)?;
-    let metrics = global::meter("pingora-proxy-metrics");
-    let metrics_layer = MetricsLayer::new(metrics_provider);
+    let metrics_layer = MetricsLayer::new(metrics_provider.clone());
 
-    Registry::default().init();
+    Registry::default()
+        .with(tracer_layer)
+        .with(metrics_layer)
+        .try_init()?;
 
     OtelGuard {
         tracer_provider,
