@@ -38,9 +38,7 @@ static MAX_REQUESTS_PER_SECOND: isize = 1;
 #[async_trait]
 impl ProxyHttp for LB {
     type CTX = ();
-    fn new_ctx(&self) -> Self::CTX {
-        ()
-    }
+    fn new_ctx(&self) -> Self::CTX {}
 
     async fn upstream_peer(
         &self,
