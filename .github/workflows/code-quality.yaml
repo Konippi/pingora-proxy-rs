@@ -21,9 +21,6 @@ jobs:
 
       - name: Caching
         uses: Swatinem/rust-cache@v2
-      
-      - name: Install `cargo-udeps`
-        run: cargo install cargo-udeps --locked
 
       - name: Format check
         run: cargo fmt --all --check
@@ -32,4 +29,4 @@ jobs:
         run: cargo clippy --all-targets --all-features
 
       - name: Unused dependencies check
-        run: cargo udeps
+        uses: bnjbvr/cargo-machete@main
