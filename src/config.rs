@@ -8,6 +8,7 @@ pub struct Config {
     // opentelemetry
     pub otel_trace_exporter_endpoint: String,
     pub otel_metrics_exporter_endpoint: String,
+    pub otel_log_exporter_endpoint: String,
 }
 
 pub static CONFIG: LazyLock<Config> = LazyLock::new(|| Config {
@@ -15,4 +16,5 @@ pub static CONFIG: LazyLock<Config> = LazyLock::new(|| Config {
     package_version: env!("CARGO_PKG_VERSION").to_string(),
     otel_trace_exporter_endpoint: "http://localhost:4317".to_string(),
     otel_metrics_exporter_endpoint: "http://localhost:4317".to_string(),
+    otel_log_exporter_endpoint: "http://localhost:4317".to_string(),
 });
