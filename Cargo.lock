@@ -1649,7 +1649,6 @@ dependencies = [
  "opentelemetry-semantic-conventions",
  "opentelemetry_sdk",
  "pingora",
- "pingora-core",
  "pingora-limits",
  "pingora-load-balancing",
  "pingora-proxy",
