@@ -5,9 +5,9 @@ use std::{
 
 use async_trait::async_trait;
 use pingora::{
+    Result,
     http::{RequestHeader, ResponseHeader, StatusCode},
     prelude::{HttpPeer, RoundRobin},
-    Result,
 };
 use pingora_limits::rate::Rate;
 use pingora_load_balancing::LoadBalancer;

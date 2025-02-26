@@ -1,27 +1,34 @@
 use opentelemetry::{
+    KeyValue,
     global::{self},
     trace::TracerProvider,
-    KeyValue,
 };
-use opentelemetry_otlp::{MetricExporter, SpanExporter, WithExportConfig};
+use opentelemetry_appender_tracing::layer::OpenTelemetryTracingBridge;
+use opentelemetry_otlp::{LogExporter, MetricExporter, SpanExporter, WithExportConfig};
 use opentelemetry_sdk::{
+    Resource,
+    logs::SdkLoggerProvider,
     metrics::{SdkMeterProvider, Temporality},
     trace::{RandomIdGenerator, Sampler, SdkTracerProvider},
-    Resource,
 };
 use opentelemetry_semantic_conventions::{
-    resource::{SERVICE_NAME, SERVICE_VERSION},
     SCHEMA_URL,
+    resource::{SERVICE_NAME, SERVICE_VERSION},
 };
-use tracing_opentelemetry::MetricsLayer;
-use tracing_opentelemetry::OpenTelemetryLayer;
+use tracing_opentelemetry::{MetricsLayer, OpenTelemetryLayer};
 use tracing_subscriber::{
-    prelude::__tracing_subscriber_SubscriberExt, util::SubscriberInitExt, Registry,
+    EnvFilter,
+    Layer,
+    Registry,
+    fmt::{self},
+    prelude::__tracing_subscriber_SubscriberExt,
+    util::SubscriberInitExt,
 };
 
 use crate::config::CONFIG;
 
-struct OtelGuard {
+pub struct OtelGuard {
+    logger_provider: SdkLoggerProvider,
     tracer_provider: SdkTracerProvider,
     metrics_provider: SdkMeterProvider,
 }
@@ -34,30 +41,60 @@ impl Drop for OtelGuard {
         self.metrics_provider
             .shutdown()
             .expect("Failed to shutdown metrics provider");
+        self.logger_provider
+            .shutdown()
+            .expect("Failed to shutdown logger provider");
     }
 }
 
-pub fn init(sampling_rate: f64) -> anyhow::Result<()> {
-    let resource = build_resource();
+pub struct OtelService {
+    pub fmt_config: FmtConfig,
+    pub sampling_rate: f64,
+}
 
-    let tracer_provider = build_tracer_provider(&resource, sampling_rate)?;
-    let tracer = tracer_provider.tracer(format!("{}-tracer", CONFIG.package_name));
-    let tracer_layer = OpenTelemetryLayer::<Registry, _>::new(tracer);
+impl OtelService {
+    pub fn new(config: OtelServiceConfig) -> Self {
+        Self {
+            fmt_config: config.fmt_config,
+            sampling_rate: config.sampling_rate,
+        }
+    }
 
-    let metrics_provider = build_metrics_provider(&resource)?;
-    let metrics_layer = MetricsLayer::new(metrics_provider.clone());
+    pub fn start_instrument(&self) -> anyhow::Result<OtelGuard> {
+        let resource = build_resource();
 
-    Registry::default()
-        .with(tracer_layer)
-        .with(metrics_layer)
-        .try_init()?;
+        let fmt_layer = build_fmt_layer(&self.fmt_config);
 
-    OtelGuard {
-        tracer_provider,
-        metrics_provider,
-    };
+        let logger_provider = build_logger_provider(&resource)?;
+        let logger_layer = OpenTelemetryTracingBridge::new(&logger_provider).with_filter(
+            EnvFilter::try_from_default_env().or_else(|_| EnvFilter::try_new("info"))?,
+        );
 
-    Ok(())
+        let tracer_provider = build_tracer_provider(&resource, self.sampling_rate)?;
+        let tracer = tracer_provider.tracer(format!("{}-tracer", CONFIG.package_name));
+        let tracer_layer = OpenTelemetryLayer::new(tracer);
+
+        let metrics_provider = build_metrics_provider(&resource)?;
+        let metrics_layer = MetricsLayer::new(metrics_provider.clone());
+
+        Registry::default()
+            .with(fmt_layer)
+            .with(logger_layer)
+            .with(tracer_layer)
+            .with(metrics_layer)
+            .try_init()?;
+
+        Ok(OtelGuard {
+            logger_provider,
+            tracer_provider,
+            metrics_provider,
+        })
+    }
+}
+
+pub struct OtelServiceConfig {
+    pub fmt_config: FmtConfig,
+    pub sampling_rate: f64,
 }
 
 fn build_resource() -> Resource {
@@ -71,6 +108,45 @@ fn build_resource() -> Resource {
         )
         .build()
 }
+
+pub struct FmtConfig {
+    pub color: bool,
+    pub file: bool,
+    pub line_number: bool,
+    pub target: bool,
+}
+
+fn build_fmt_layer(config: &FmtConfig) -> fmt::Layer<Registry> {
+    fmt::Layer::new()
+        .with_ansi(config.color)
+        .with_file(config.file)
+        .with_line_number(config.line_number)
+        .with_target(config.target)
+}
+
+fn build_logger_provider(resource: &Resource) -> anyhow::Result<SdkLoggerProvider> {
+    let exporter = LogExporter::builder()
+        .with_tonic()
+        .with_endpoint(CONFIG.otel_log_exporter_endpoint.as_str())
+        .build()?;
+    let provider = SdkLoggerProvider::builder()
+        .with_resource(resource.clone())
+        .with_simple_exporter(exporter)
+        .build();
+
+    Ok(provider)
+}
+
+// pub struct TracerConfig {
+//     pub sampling_rate: f64,
+//     pub timeout: Duration,
+//     pub max_attributes_per_span: usize,
+//     pub max_events_per_span: usize,
+//     pub max_queue_size: usize,
+//     pub scheduled_delay: Duration,
+//     pub max_export_batch_size: usize,
+//     pub max_export_timeout: Duration,
+// }
 
 fn build_tracer_provider(
     resource: &Resource,
