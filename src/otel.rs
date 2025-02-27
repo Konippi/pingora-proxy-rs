@@ -9,7 +9,7 @@ use opentelemetry_sdk::{
     Resource,
     logs::SdkLoggerProvider,
     metrics::{SdkMeterProvider, Temporality},
-    trace::{RandomIdGenerator, Sampler, SdkTracerProvider},
+    trace::{BatchConfig, BatchSpanProcessor, RandomIdGenerator, Sampler, SdkTracerProvider},
 };
 use opentelemetry_semantic_conventions::{
     SCHEMA_URL,
@@ -70,7 +70,8 @@ impl OtelService {
             EnvFilter::try_from_default_env().or_else(|_| EnvFilter::try_new("info"))?,
         );
 
-        let tracer_provider = build_tracer_provider(&resource, self.sampling_rate)?;
+        let tracer_provider =
+            build_tracer_provider(&resource, BatchConfig::default(), self.sampling_rate)?;
         let tracer = tracer_provider.tracer(format!("{}-tracer", CONFIG.package_name));
         let tracer_layer = OpenTelemetryLayer::new(tracer);
 
@@ -137,19 +138,9 @@ fn build_logger_provider(resource: &Resource) -> anyhow::Result<SdkLoggerProvide
     Ok(provider)
 }
 
-// pub struct TracerConfig {
-//     pub sampling_rate: f64,
-//     pub timeout: Duration,
-//     pub max_attributes_per_span: usize,
-//     pub max_events_per_span: usize,
-//     pub max_queue_size: usize,
-//     pub scheduled_delay: Duration,
-//     pub max_export_batch_size: usize,
-//     pub max_export_timeout: Duration,
-// }
-
 fn build_tracer_provider(
     resource: &Resource,
+    batch_config: BatchConfig,
     sampling_rate: f64,
 ) -> anyhow::Result<SdkTracerProvider> {
     let sampler = Sampler::ParentBased(Box::new(Sampler::TraceIdRatioBased(sampling_rate)));
@@ -158,11 +149,14 @@ fn build_tracer_provider(
         .with_tonic()
         .with_endpoint(CONFIG.otel_trace_exporter_endpoint.as_str())
         .build()?;
+    let batch_span_processor = BatchSpanProcessor::builder(exporter)
+        .with_batch_config(batch_config)
+        .build();
     let provider = SdkTracerProvider::builder()
         .with_sampler(sampler)
         .with_id_generator(id_generator)
         .with_resource(resource.clone())
-        .with_batch_exporter(exporter)
+        .with_span_processor(batch_span_processor)
         .build();
 
     global::set_tracer_provider(provider.clone());
