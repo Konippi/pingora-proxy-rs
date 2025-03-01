@@ -23,7 +23,6 @@ fn main() {
             line_number: true,
             target: true,
         },
-        sampling_rate: 0.5,
     });
     let _otel = otel_service
         .start_instrument()

@@ -9,7 +9,7 @@ use opentelemetry_sdk::{
     Resource,
     logs::SdkLoggerProvider,
     metrics::{SdkMeterProvider, Temporality},
-    trace::{BatchConfig, BatchSpanProcessor, RandomIdGenerator, Sampler, SdkTracerProvider},
+    trace::{BatchConfig, BatchSpanProcessor, RandomIdGenerator, SdkTracerProvider},
 };
 use opentelemetry_semantic_conventions::{
     SCHEMA_URL,
@@ -49,14 +49,12 @@ impl Drop for OtelGuard {
 
 pub struct OtelService {
     pub fmt_config: FmtConfig,
-    pub sampling_rate: f64,
 }
 
 impl OtelService {
     pub fn new(config: OtelServiceConfig) -> Self {
         Self {
             fmt_config: config.fmt_config,
-            sampling_rate: config.sampling_rate,
         }
     }
 
@@ -70,8 +68,7 @@ impl OtelService {
             EnvFilter::try_from_default_env().or_else(|_| EnvFilter::try_new("info"))?,
         );
 
-        let tracer_provider =
-            build_tracer_provider(&resource, BatchConfig::default(), self.sampling_rate)?;
+        let tracer_provider = build_tracer_provider(&resource, BatchConfig::default())?;
         let tracer = tracer_provider.tracer(format!("{}-tracer", CONFIG.package_name));
         let tracer_layer = OpenTelemetryLayer::new(tracer);
 
@@ -95,7 +92,6 @@ impl OtelService {
 
 pub struct OtelServiceConfig {
     pub fmt_config: FmtConfig,
-    pub sampling_rate: f64,
 }
 
 fn build_resource() -> Resource {
@@ -141,9 +137,7 @@ fn build_logger_provider(resource: &Resource) -> anyhow::Result<SdkLoggerProvide
 fn build_tracer_provider(
     resource: &Resource,
     batch_config: BatchConfig,
-    sampling_rate: f64,
 ) -> anyhow::Result<SdkTracerProvider> {
-    let sampler = Sampler::ParentBased(Box::new(Sampler::TraceIdRatioBased(sampling_rate)));
     let id_generator = RandomIdGenerator::default();
     let exporter = SpanExporter::builder()
         .with_tonic()
@@ -153,7 +147,6 @@ fn build_tracer_provider(
         .with_batch_config(batch_config)
         .build();
     let provider = SdkTracerProvider::builder()
-        .with_sampler(sampler)
         .with_id_generator(id_generator)
         .with_resource(resource.clone())
         .with_span_processor(batch_span_processor)
