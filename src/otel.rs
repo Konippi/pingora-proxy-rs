@@ -47,19 +47,13 @@ impl Drop for OtelGuard {
     }
 }
 
-pub struct OtelService {
-    pub fmt_config: FmtConfig,
-}
+pub struct OtelService;
 
 impl OtelService {
-    pub fn new(fmt_config: FmtConfig) -> Self {
-        Self { fmt_config }
-    }
-
     pub fn start_instrument(&self) -> anyhow::Result<OtelGuard> {
         let resource = build_resource();
 
-        let fmt_layer = build_fmt_layer(&self.fmt_config);
+        let fmt_layer = build_fmt_layer();
 
         let logger_provider = build_logger_provider(&resource)?;
         let logger_layer = OpenTelemetryTracingBridge::new(&logger_provider).with_filter(
@@ -88,6 +82,7 @@ impl OtelService {
     }
 }
 
+/// Build a resource.
 fn build_resource() -> Resource {
     Resource::builder()
         .with_schema_url(
@@ -100,21 +95,17 @@ fn build_resource() -> Resource {
         .build()
 }
 
-pub struct FmtConfig {
-    pub color: bool,
-    pub file: bool,
-    pub line_number: bool,
-    pub target: bool,
-}
-
-fn build_fmt_layer(config: &FmtConfig) -> fmt::Layer<Registry> {
+/// Build a fmt layer for tracing subscriber.
+fn build_fmt_layer() -> fmt::Layer<Registry> {
     fmt::Layer::new()
-        .with_ansi(config.color)
-        .with_file(config.file)
-        .with_line_number(config.line_number)
-        .with_target(config.target)
+        .with_ansi(CONFIG.tracing_subscriber_fmt_color)
+        .with_file(CONFIG.tracing_subscriber_fmt_file)
+        .with_line_number(CONFIG.tracing_subscriber_fmt_line_number)
+        .with_target(CONFIG.tracing_subscriber_fmt_target)
+        .with_thread_names(CONFIG.tracing_subscriber_fmt_thread_names)
 }
 
+/// Build a logger provider.
 fn build_logger_provider(resource: &Resource) -> anyhow::Result<SdkLoggerProvider> {
     let exporter = LogExporter::builder()
         .with_tonic()
@@ -128,6 +119,7 @@ fn build_logger_provider(resource: &Resource) -> anyhow::Result<SdkLoggerProvide
     Ok(provider)
 }
 
+/// Build a tracer provider.
 fn build_tracer_provider(resource: &Resource) -> anyhow::Result<SdkTracerProvider> {
     let id_generator = RandomIdGenerator::default();
     let exporter = SpanExporter::builder()
@@ -155,6 +147,7 @@ fn build_tracer_provider(resource: &Resource) -> anyhow::Result<SdkTracerProvide
     Ok(provider)
 }
 
+/// Build a metrics provider.
 fn build_metrics_provider(resource: &Resource) -> anyhow::Result<SdkMeterProvider> {
     let exporter = MetricExporter::builder()
         .with_tonic()

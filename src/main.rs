@@ -1,14 +1,13 @@
 use std::time::Duration;
 
 use load_balancer::LB;
-use otel::{FmtConfig, OtelService};
+use otel::OtelService;
 use pingora::{
     prelude::{TcpHealthCheck, background_service},
     server::Server,
 };
 use pingora_load_balancing::LoadBalancer;
 use pingora_proxy::http_proxy_service;
-use supports_color::Stream;
 
 mod config;
 mod load_balancer;
@@ -16,15 +15,9 @@ mod otel;
 
 fn main() {
     // Setup OpenTelemetry
-    let otel_service = OtelService::new(FmtConfig {
-        color: supports_color::on(Stream::Stdout).is_some(),
-        file: true,
-        line_number: true,
-        target: true,
-    });
-    let _otel = otel_service
+    let _otel_service = OtelService
         .start_instrument()
-        .expect("Failed to initialize OpenTelemetry");
+        .expect("Failed to start OpenTelemetry");
 
     // Setup Pingora Server
     let mut server = Server::new(None).expect("Failed to create server");
