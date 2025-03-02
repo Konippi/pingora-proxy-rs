@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use load_balancer::LB;
-use otel::{FmtConfig, OtelService, OtelServiceConfig};
+use otel::{FmtConfig, OtelService};
 use pingora::{
     prelude::{TcpHealthCheck, background_service},
     server::Server,
@@ -16,13 +16,11 @@ mod otel;
 
 fn main() {
     // Setup OpenTelemetry
-    let otel_service = OtelService::new(OtelServiceConfig {
-        fmt_config: FmtConfig {
-            color: supports_color::on(Stream::Stdout).is_some(),
-            file: true,
-            line_number: true,
-            target: true,
-        },
+    let otel_service = OtelService::new(FmtConfig {
+        color: supports_color::on(Stream::Stdout).is_some(),
+        file: true,
+        line_number: true,
+        target: true,
     });
     let _otel = otel_service
         .start_instrument()

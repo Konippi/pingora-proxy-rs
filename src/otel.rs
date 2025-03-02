@@ -9,7 +9,7 @@ use opentelemetry_sdk::{
     Resource,
     logs::SdkLoggerProvider,
     metrics::{SdkMeterProvider, Temporality},
-    trace::{BatchConfig, BatchSpanProcessor, RandomIdGenerator, SdkTracerProvider},
+    trace::{self, RandomIdGenerator, SdkTracerProvider},
 };
 use opentelemetry_semantic_conventions::{
     SCHEMA_URL,
@@ -52,10 +52,8 @@ pub struct OtelService {
 }
 
 impl OtelService {
-    pub fn new(config: OtelServiceConfig) -> Self {
-        Self {
-            fmt_config: config.fmt_config,
-        }
+    pub fn new(fmt_config: FmtConfig) -> Self {
+        Self { fmt_config }
     }
 
     pub fn start_instrument(&self) -> anyhow::Result<OtelGuard> {
@@ -68,7 +66,7 @@ impl OtelService {
             EnvFilter::try_from_default_env().or_else(|_| EnvFilter::try_new("info"))?,
         );
 
-        let tracer_provider = build_tracer_provider(&resource, BatchConfig::default())?;
+        let tracer_provider = build_tracer_provider(&resource)?;
         let tracer = tracer_provider.tracer(format!("{}-tracer", CONFIG.package_name));
         let tracer_layer = OpenTelemetryLayer::new(tracer);
 
@@ -88,10 +86,6 @@ impl OtelService {
             metrics_provider,
         })
     }
-}
-
-pub struct OtelServiceConfig {
-    pub fmt_config: FmtConfig,
 }
 
 fn build_resource() -> Resource {
@@ -134,17 +128,21 @@ fn build_logger_provider(resource: &Resource) -> anyhow::Result<SdkLoggerProvide
     Ok(provider)
 }
 
-fn build_tracer_provider(
-    resource: &Resource,
-    batch_config: BatchConfig,
-) -> anyhow::Result<SdkTracerProvider> {
+fn build_tracer_provider(resource: &Resource) -> anyhow::Result<SdkTracerProvider> {
     let id_generator = RandomIdGenerator::default();
     let exporter = SpanExporter::builder()
         .with_tonic()
         .with_endpoint(CONFIG.otel_trace_exporter_endpoint.as_str())
         .build()?;
-    let batch_span_processor = BatchSpanProcessor::builder(exporter)
-        .with_batch_config(batch_config)
+    let processor_config = trace::BatchConfigBuilder::default()
+        .with_max_queue_size(CONFIG.otel_trace_processor_max_queue_size)
+        .with_scheduled_delay(CONFIG.otel_trace_processor_scheduled_delay)
+        .with_max_export_batch_size(CONFIG.otel_trace_processor_max_export_batch_size)
+        .with_max_export_timeout(CONFIG.otel_trace_processor_max_export_timeout)
+        .with_max_concurrent_exports(CONFIG.otel_trace_processor_max_concurrent_exports)
+        .build();
+    let batch_span_processor = trace::BatchSpanProcessor::builder(exporter)
+        .with_batch_config(processor_config)
         .build();
     let provider = SdkTracerProvider::builder()
         .with_id_generator(id_generator)
