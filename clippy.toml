@@ -1,3 +1,4 @@
+# SEE: https://doc.rust-lang.org/clippy/lint_configuration.html
 allow-unwrap-in-tests = true
 cognitive-complexity-threshold = 10
 msrv = "1.85.0"

@@ -17,9 +17,7 @@ use opentelemetry_semantic_conventions::{
 };
 use tracing_opentelemetry::{MetricsLayer, OpenTelemetryLayer};
 use tracing_subscriber::{
-    EnvFilter,
-    Layer,
-    Registry,
+    EnvFilter, Layer, Registry,
     fmt::{self},
     prelude::__tracing_subscriber_SubscriberExt,
     util::SubscriberInitExt,
