@@ -1,3 +1,6 @@
+use std::sync::Arc;
+
+use async_trait::async_trait;
 use opentelemetry::{
     KeyValue,
     global::{self},
@@ -17,6 +20,7 @@ use opentelemetry_semantic_conventions::{
     SCHEMA_URL,
     resource::{SERVICE_NAME, SERVICE_VERSION},
 };
+use pingora::{server::ShutdownWatch, services::background::BackgroundService};
 use tracing_opentelemetry::{MetricsLayer, OpenTelemetryLayer};
 use tracing_subscriber::{
     EnvFilter, Layer, Registry,
@@ -48,6 +52,29 @@ impl Drop for OtelGuard {
 }
 
 pub struct OtelService;
+
+#[async_trait]
+impl BackgroundService for OtelService {
+    async fn start(&self, mut shutdown: ShutdownWatch) {
+        match self.start_instrument() {
+            Ok(otel_guard) => {
+                let _otel_guard = Arc::new(otel_guard);
+                tracing::info!("OpenTelemetry instrumentation started.");
+
+                if let Err(e) = shutdown.changed().await {
+                    tracing::error!("Error during shutdown: {}", e);
+                }
+                tracing::info!("OpenTelemetry instrumentation shutting down.");
+            }
+            Err(e) => {
+                tracing::error!(
+                    "Failed to start OpenTelemetry instrumentation: {:#}",
+                    e
+                );
+            }
+        }
+    }
+}
 
 impl OtelService {
     pub fn start_instrument(&self) -> anyhow::Result<OtelGuard> {

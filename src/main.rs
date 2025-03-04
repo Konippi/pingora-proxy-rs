@@ -14,14 +14,11 @@ mod load_balancer;
 mod otel;
 
 fn main() {
-    // Setup OpenTelemetry
-    let _otel_service = OtelService
-        .start_instrument()
-        .expect("Failed to start OpenTelemetry");
-
-    // Setup Pingora Server
     let mut server = Server::new(None).expect("Failed to create server");
     server.bootstrap();
+
+    let otel_service = background_service("otel", OtelService);
+    server.add_service(otel_service);
 
     let mut upstreams =
         LoadBalancer::try_from_iter(["1.1.1.1:443", "1.0.0.1:443"]).unwrap();
