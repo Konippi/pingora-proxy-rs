@@ -4,7 +4,9 @@ use opentelemetry::{
     trace::TracerProvider,
 };
 use opentelemetry_appender_tracing::layer::OpenTelemetryTracingBridge;
-use opentelemetry_otlp::{LogExporter, MetricExporter, SpanExporter, WithExportConfig};
+use opentelemetry_otlp::{
+    LogExporter, MetricExporter, SpanExporter, WithExportConfig,
+};
 use opentelemetry_sdk::{
     Resource,
     logs::SdkLoggerProvider,
@@ -54,12 +56,15 @@ impl OtelService {
         let fmt_layer = build_fmt_layer();
 
         let logger_provider = build_logger_provider(&resource)?;
-        let logger_layer = OpenTelemetryTracingBridge::new(&logger_provider).with_filter(
-            EnvFilter::try_from_default_env().or_else(|_| EnvFilter::try_new("info"))?,
-        );
+        let logger_layer = OpenTelemetryTracingBridge::new(&logger_provider)
+            .with_filter(
+                EnvFilter::try_from_default_env()
+                    .or_else(|_| EnvFilter::try_new("info"))?,
+            );
 
         let tracer_provider = build_tracer_provider(&resource)?;
-        let tracer = tracer_provider.tracer(format!("{}-tracer", CONFIG.package_name));
+        let tracer =
+            tracer_provider.tracer(format!("{}-tracer", CONFIG.package_name));
         let tracer_layer = OpenTelemetryLayer::new(tracer);
 
         let metrics_provider = build_metrics_provider(&resource)?;
@@ -104,7 +109,9 @@ fn build_fmt_layer() -> fmt::Layer<Registry> {
 }
 
 /// Build a logger provider.
-fn build_logger_provider(resource: &Resource) -> anyhow::Result<SdkLoggerProvider> {
+fn build_logger_provider(
+    resource: &Resource,
+) -> anyhow::Result<SdkLoggerProvider> {
     let exporter = LogExporter::builder()
         .with_tonic()
         .with_endpoint(CONFIG.otel_log_exporter_endpoint.as_str())
@@ -118,7 +125,9 @@ fn build_logger_provider(resource: &Resource) -> anyhow::Result<SdkLoggerProvide
 }
 
 /// Build a tracer provider.
-fn build_tracer_provider(resource: &Resource) -> anyhow::Result<SdkTracerProvider> {
+fn build_tracer_provider(
+    resource: &Resource,
+) -> anyhow::Result<SdkTracerProvider> {
     let id_generator = RandomIdGenerator::default();
     let exporter = SpanExporter::builder()
         .with_tonic()
@@ -127,9 +136,13 @@ fn build_tracer_provider(resource: &Resource) -> anyhow::Result<SdkTracerProvide
     let processor_config = trace::BatchConfigBuilder::default()
         .with_max_queue_size(CONFIG.otel_trace_processor_max_queue_size)
         .with_scheduled_delay(CONFIG.otel_trace_processor_scheduled_delay)
-        .with_max_export_batch_size(CONFIG.otel_trace_processor_max_export_batch_size)
+        .with_max_export_batch_size(
+            CONFIG.otel_trace_processor_max_export_batch_size,
+        )
         .with_max_export_timeout(CONFIG.otel_trace_processor_max_export_timeout)
-        .with_max_concurrent_exports(CONFIG.otel_trace_processor_max_concurrent_exports)
+        .with_max_concurrent_exports(
+            CONFIG.otel_trace_processor_max_concurrent_exports,
+        )
         .build();
     let batch_span_processor = trace::BatchSpanProcessor::builder(exporter)
         .with_batch_config(processor_config)
@@ -146,7 +159,9 @@ fn build_tracer_provider(resource: &Resource) -> anyhow::Result<SdkTracerProvide
 }
 
 /// Build a metrics provider.
-fn build_metrics_provider(resource: &Resource) -> anyhow::Result<SdkMeterProvider> {
+fn build_metrics_provider(
+    resource: &Resource,
+) -> anyhow::Result<SdkMeterProvider> {
     let exporter = MetricExporter::builder()
         .with_tonic()
         .with_endpoint(CONFIG.otel_metrics_exporter_endpoint.as_str())

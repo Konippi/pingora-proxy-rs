@@ -1,5 +1,5 @@
 # SEE: https://rust-lang.github.io/rustfmt/
-max_width = 100
+max_width = 80
 comment_width = 100
 newline_style = "Unix"
 imports_granularity = "Crate"

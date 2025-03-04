@@ -32,7 +32,8 @@ impl LB {
     }
 }
 
-static RATE_LIMIT: LazyLock<Rate> = LazyLock::new(|| Rate::new(Duration::from_secs(1)));
+static RATE_LIMIT: LazyLock<Rate> =
+    LazyLock::new(|| Rate::new(Duration::from_secs(1)));
 static MAX_REQUESTS_PER_SECOND: isize = 1;
 
 #[async_trait]
@@ -49,7 +50,11 @@ impl ProxyHttp for LB {
 
         tracing::info!("upstream peer: {:?}", upstream);
 
-        let peer = Box::new(HttpPeer::new(upstream, true, "one.one.one.one".to_string()));
+        let peer = Box::new(HttpPeer::new(
+            upstream,
+            true,
+            "one.one.one.one".to_string(),
+        ));
         Ok(peer)
     }
 
@@ -63,7 +68,11 @@ impl ProxyHttp for LB {
         Ok(())
     }
 
-    async fn request_filter(&self, session: &mut Session, _ctx: &mut Self::CTX) -> Result<bool> {
+    async fn request_filter(
+        &self,
+        session: &mut Session,
+        _ctx: &mut Self::CTX,
+    ) -> Result<bool> {
         let appid = match self.get_request_appid(session) {
             None => return Ok(true),
             Some(appid) => appid,
@@ -71,9 +80,15 @@ impl ProxyHttp for LB {
         let current_window_request = RATE_LIMIT.observe(&appid, 1);
 
         if current_window_request > MAX_REQUESTS_PER_SECOND {
-            let mut header =
-                ResponseHeader::build(StatusCode::TOO_MANY_REQUESTS.as_u16(), None).unwrap();
-            header.insert_header("X-Rate-Limit-Limit", MAX_REQUESTS_PER_SECOND.to_string())?;
+            let mut header = ResponseHeader::build(
+                StatusCode::TOO_MANY_REQUESTS.as_u16(),
+                None,
+            )
+            .unwrap();
+            header.insert_header(
+                "X-Rate-Limit-Limit",
+                MAX_REQUESTS_PER_SECOND.to_string(),
+            )?;
             header.insert_header("X-Rate-Limit-Remaining", "0")?;
             header.insert_header("X-Rate-Limit-Reset", "1")?;
             session.set_keepalive(None);
