@@ -34,7 +34,7 @@ impl LB {
 
 static RATE_LIMIT: LazyLock<Rate> =
     LazyLock::new(|| Rate::new(Duration::from_secs(1)));
-static MAX_REQUESTS_PER_SECOND: isize = 1;
+const MAX_REQUESTS_PER_SECOND: isize = 1;
 
 #[async_trait]
 impl ProxyHttp for LB {

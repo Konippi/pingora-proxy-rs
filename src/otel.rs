@@ -117,8 +117,8 @@ fn build_resource() -> Resource {
     Resource::builder()
         .with_schema_url(
             [
-                KeyValue::new(SERVICE_NAME, CONFIG.package_name.as_str()),
-                KeyValue::new(SERVICE_VERSION, CONFIG.package_version.as_str()),
+                KeyValue::new(SERVICE_NAME, CONFIG.package_name),
+                KeyValue::new(SERVICE_VERSION, CONFIG.package_version),
             ],
             SCHEMA_URL,
         )
@@ -141,7 +141,7 @@ fn build_logger_provider(
 ) -> anyhow::Result<SdkLoggerProvider> {
     let exporter = LogExporter::builder()
         .with_tonic()
-        .with_endpoint(CONFIG.otel_log_exporter_endpoint.as_str())
+        .with_endpoint(CONFIG.otel_log_exporter_endpoint)
         .build()?;
     let provider = SdkLoggerProvider::builder()
         .with_resource(resource.clone())
@@ -158,7 +158,7 @@ fn build_tracer_provider(
     let id_generator = RandomIdGenerator::default();
     let exporter = SpanExporter::builder()
         .with_tonic()
-        .with_endpoint(CONFIG.otel_trace_exporter_endpoint.as_str())
+        .with_endpoint(CONFIG.otel_trace_exporter_endpoint)
         .build()?;
     let processor_config = trace::BatchConfigBuilder::default()
         .with_max_queue_size(CONFIG.otel_trace_processor_max_queue_size)
@@ -191,7 +191,7 @@ fn build_metrics_provider(
 ) -> anyhow::Result<SdkMeterProvider> {
     let exporter = MetricExporter::builder()
         .with_tonic()
-        .with_endpoint(CONFIG.otel_metrics_exporter_endpoint.as_str())
+        .with_endpoint(CONFIG.otel_metrics_exporter_endpoint)
         .with_temporality(Temporality::Cumulative)
         .build()?;
     let provider = SdkMeterProvider::builder()
