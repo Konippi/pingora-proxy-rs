@@ -31,6 +31,7 @@ use tracing_subscriber::{
 
 use crate::config::CONFIG;
 
+#[derive(Debug)]
 pub struct OtelGuard {
     logger_provider: SdkLoggerProvider,
     tracer_provider: SdkTracerProvider,
