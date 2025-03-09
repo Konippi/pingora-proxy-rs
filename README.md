@@ -6,8 +6,12 @@ This example focuses on how to implement a reverse proxy server using [Pingora](
 
 > Pingora is a Rust framework to build fast, reliable and programmable networked systems. Pingora is battle tested as it has been serving more than 40 million Internet requests per second for more than a few years.
 
-## Implemented Features
+## Implemented features
 
 - Round-robin load balancing
 - Health checking for upstream servers
 - Rate limiting
+
+## Features to be implemented
+
+- [ ] Integration with Opentelemetry
