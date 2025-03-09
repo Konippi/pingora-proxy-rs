@@ -17,10 +17,12 @@ pub struct LB(pub Arc<LoadBalancer<RoundRobin>>);
 
 impl LB {
     pub fn get_request_appid(&self, session: &Session) -> Option<String> {
+        const APP_ID_HEADER: &str = "appid";
+
         match session
             .req_header()
             .headers
-            .get("appid")
+            .get(APP_ID_HEADER)
             .map(|appid| appid.to_str())
         {
             None => None,

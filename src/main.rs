@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use config::CONFIG;
 use load_balancer::LB;
 use otel::OtelService;
@@ -25,7 +23,7 @@ fn main() {
         .expect("Failed to create load balancer");
     let health_check = TcpHealthCheck::new();
     upstreams.set_health_check(health_check);
-    upstreams.health_check_frequency = Some(Duration::from_secs(1));
+    upstreams.health_check_frequency = Some(CONFIG.lb_health_check_frequency);
 
     let health_check_service = background_service("health check", upstreams);
     let health_check_task = health_check_service.task();

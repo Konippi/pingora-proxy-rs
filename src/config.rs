@@ -11,6 +11,7 @@ pub struct Config {
     // load-balancer
     pub lb_backends: [&'static str; 2],
     pub lb_tcp_listening_endpoint: &'static str,
+    pub lb_health_check_frequency: Duration,
 
     // tracing-subscriber
     pub tracing_subscriber_fmt_color: bool,
@@ -38,6 +39,7 @@ pub static CONFIG: LazyLock<Config> = LazyLock::new(|| Config {
     // load-balancer
     lb_backends: ["1.1.1.1:443", "1.0.0.1:443"],
     lb_tcp_listening_endpoint: "0.0.0.0:6188",
+    lb_health_check_frequency: Duration::from_secs(1),
 
     // tracing-subscriber
     tracing_subscriber_fmt_color: supports_color::on(Stream::Stdout).is_some(),
