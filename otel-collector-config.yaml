@@ -2,34 +2,33 @@ receivers:
   otlp:
     protocols:
       grpc:
-        endpoint: 0.0.0.0:4317
+        endpoint: 0.0.0.0:${env:OTEL_COLLECTOR_GRPC_PORT}
 
 processors:
   batch:
 
 exporters:
-  logging:
-    loglevel: debug
+  debug:
   otlp/openobserve:
-    endpoint: ${env:OPENOBSERVE_ENDPOINT}
+    endpoint: "${env:OPENOBSERVE_HOST}:${env:OPENOBSERVE_PORT}"
     headers:
       Authorization: "Basic ${env:OPENOBSERVE_AUTH}"
-      organization: ${env:OPENOBSERVE_ORG}
+      organization: default
       stream-name: default
     tls:
-      insecure: false
+      insecure: true
 
 service:
   pipelines:
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [logging, otlp/openobserve]
+      exporters: [debug, otlp/openobserve]
     metrics:
       receivers: [otlp]
       processors: [batch]
-      exporters: [logging, otlp/openobserve]
+      exporters: [debug, otlp/openobserve]
     logs:
       receivers: [otlp]
       processors: [batch]
-      exporters: [logging, otlp/openobserve]
+      exporters: [debug, otlp/openobserve]

@@ -1,0 +1,26 @@
+services:
+  openobserve:
+    image: openobserve/openobserve:v0.14.4
+    container_name: openobserve
+    ports:
+      - "5080:5080"
+      - "5081:5081"
+    environment:
+      ZO_ROOT_USER_EMAIL: "${OPENOBSERVE_USER_EMAIL:-root@example.com}"
+      ZO_ROOT_USER_PASSWORD: "${OPENOBSERVE_USER_PASSWORD:-Complexpass#123}"
+
+  otel-collector:
+    image: otel/opentelemetry-collector:0.121.0
+    container_name: otel-collector
+    ports:
+      - "4317:4317"
+    volumes:
+      - ./otel-collector-config.yaml:/etc/config.yaml
+    environment:
+      OPENOBSERVE_HOST: "openobserve"
+      OPENOBSERVE_PORT: "5081"
+      OPENOBSERVE_AUTH: "cm9vdEBleGFtcGxlLmNvbTpDb21wbGV4cGFzcyMxMjM="
+      OTEL_COLLECTOR_GRPC_PORT: "4317"
+    command: ["--config=/etc/config.yaml"]
+    depends_on:
+      - openobserve
