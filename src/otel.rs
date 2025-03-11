@@ -61,11 +61,6 @@ impl BackgroundService for OtelService {
             Ok(otel_guard) => {
                 let _otel_guard = Arc::new(otel_guard);
                 tracing::info!("OpenTelemetry instrumentation started.");
-
-                if let Err(e) = shutdown.changed().await {
-                    tracing::error!("Error during shutdown: {}", e);
-                }
-                tracing::info!("OpenTelemetry instrumentation shutting down.");
             }
             Err(e) => {
                 tracing::error!(
@@ -73,6 +68,9 @@ impl BackgroundService for OtelService {
                     e
                 );
             }
+        }
+        if let Err(e) = shutdown.changed().await {
+            tracing::error!("Error during shutdown: {}", e);
         }
     }
 }
