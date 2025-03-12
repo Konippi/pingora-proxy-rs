@@ -2,6 +2,7 @@ services:
   openobserve:
     image: openobserve/openobserve:v0.14.4
     container_name: openobserve
+    restart: always
     ports:
       - "5080:5080"
       - "5081:5081"
@@ -12,6 +13,7 @@ services:
   otel-collector:
     image: otel/opentelemetry-collector:0.121.0
     container_name: otel-collector
+    restart: always
     ports:
       - "4317:4317"
     volumes:

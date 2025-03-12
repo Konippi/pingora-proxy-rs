@@ -8,7 +8,6 @@ processors:
   batch:
 
 exporters:
-  debug:
   otlp/openobserve:
     endpoint: "${env:OPENOBSERVE_HOST}:${env:OPENOBSERVE_PORT}"
     headers:
@@ -23,12 +22,12 @@ service:
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [debug, otlp/openobserve]
+      exporters: [otlp/openobserve]
     metrics:
       receivers: [otlp]
       processors: [batch]
-      exporters: [debug, otlp/openobserve]
+      exporters: [otlp/openobserve]
     logs:
       receivers: [otlp]
       processors: [batch]
-      exporters: [debug, otlp/openobserve]
+      exporters: [otlp/openobserve]
