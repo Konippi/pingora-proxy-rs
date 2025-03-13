@@ -40,15 +40,15 @@ pub struct OtelGuard {
 
 impl Drop for OtelGuard {
     fn drop(&mut self) {
-        self.tracer_provider
-            .shutdown()
-            .expect("Failed to shutdown tracer provider");
-        self.metrics_provider
-            .shutdown()
-            .expect("Failed to shutdown metrics provider");
-        self.logger_provider
-            .shutdown()
-            .expect("Failed to shutdown logger provider");
+        if let Err(e) = self.logger_provider.shutdown() {
+            tracing::error!("Failed to shutdown logger provider: {}", e);
+        }
+        if let Err(e) = self.tracer_provider.shutdown() {
+            tracing::error!("Failed to shutdown tracer provider: {}", e);
+        }
+        if let Err(e) = self.metrics_provider.shutdown() {
+            tracing::error!("Failed to shutdown metrics provider: {}", e);
+        }
     }
 }
 
