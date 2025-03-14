@@ -16,6 +16,7 @@ use pingora_proxy::{ProxyHttp, Session};
 pub struct LB(pub Arc<LoadBalancer<RoundRobin>>);
 
 impl LB {
+    #[tracing::instrument(skip_all)]
     pub fn get_request_appid(&self, session: &Session) -> Option<String> {
         const APP_ID_HEADER: &str = "appid";
 
@@ -43,6 +44,7 @@ impl ProxyHttp for LB {
     type CTX = ();
     fn new_ctx(&self) -> Self::CTX {}
 
+    #[tracing::instrument(skip_all, fields(upstream = tracing::field::Empty))]
     async fn upstream_peer(
         &self,
         _session: &mut Session,
@@ -50,7 +52,7 @@ impl ProxyHttp for LB {
     ) -> Result<Box<HttpPeer>> {
         let upstream = self.0.select(b"", 256).unwrap();
 
-        tracing::info!("upstream peer: {:?}", upstream);
+        tracing::info!(upstream = ?upstream, "upstream peer selected");
 
         let peer = Box::new(HttpPeer::new(
             upstream,
@@ -60,6 +62,7 @@ impl ProxyHttp for LB {
         Ok(peer)
     }
 
+    #[tracing::instrument(skip(self, _session, _ctx))]
     async fn upstream_request_filter(
         &self,
         _session: &mut Session,
@@ -70,6 +73,7 @@ impl ProxyHttp for LB {
         Ok(())
     }
 
+    #[tracing::instrument(skip_all, fields(appid, rate_limit = false))]
     async fn request_filter(
         &self,
         session: &mut Session,
@@ -77,11 +81,16 @@ impl ProxyHttp for LB {
     ) -> Result<bool> {
         let appid = match self.get_request_appid(session) {
             None => return Ok(true),
-            Some(appid) => appid,
+            Some(appid) => {
+                tracing::Span::current().record("appid", &appid);
+                appid
+            }
         };
         let current_window_request = RATE_LIMIT.observe(&appid, 1);
 
         if current_window_request > MAX_REQUESTS_PER_SECOND {
+            tracing::Span::current().record("rate_limit", true);
+
             let mut header = ResponseHeader::build(
                 StatusCode::TOO_MANY_REQUESTS.as_u16(),
                 None,
