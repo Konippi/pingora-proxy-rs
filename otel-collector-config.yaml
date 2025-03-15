@@ -17,7 +17,12 @@ exporters:
     tls:
       insecure: true
 
+extensions:
+  health_check:
+    endpoint: "${env:OTEL_COLLECTOR_HEALTH_CHECK_ENDPOINT}"
+
 service:
+  extensions: [health_check]
   pipelines:
     traces:
       receivers: [otlp]
