@@ -11,7 +11,7 @@ services:
       ZO_ROOT_USER_PASSWORD: "${OPENOBSERVE_USER_PASSWORD:-Complexpass#123}"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5080/healthz"]
-      interval: 30s
+      interval: 1min
       timeout: 5s
       retries: 5
       start_period: 10s
