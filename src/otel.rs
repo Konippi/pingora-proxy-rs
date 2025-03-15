@@ -36,14 +36,27 @@ pub struct OtelGuard {
 
 impl Drop for OtelGuard {
     fn drop(&mut self) {
-        if let Err(e) = self.logger_provider.shutdown() {
-            tracing::error!("Failed to shutdown logger provider: {}", e);
-        }
-        if let Err(e) = self.tracer_provider.shutdown() {
-            tracing::error!("Failed to shutdown tracer provider: {}", e);
-        }
-        if let Err(e) = self.metrics_provider.shutdown() {
-            tracing::error!("Failed to shutdown metrics provider: {}", e);
+        let results = vec![
+            self.logger_provider
+                .shutdown()
+                .map_err(|e| format!("Logger shutdown failed: {}", e)),
+            self.tracer_provider
+                .shutdown()
+                .map_err(|e| format!("Tracer shutdown failed: {}", e)),
+            self.metrics_provider
+                .shutdown()
+                .map_err(|e| format!("Metrics shutdown failed: {}", e)),
+        ];
+
+        let errors: Vec<String> =
+            results.into_iter().filter_map(Result::err).collect();
+        if errors.is_empty() {
+            tracing::info!("OpenTelemetry shutdown completed successfully.");
+        } else {
+            tracing::error!(
+                "OpenTelemetry shutdown encountered errors: {:?}",
+                errors
+            );
         }
     }
 }
