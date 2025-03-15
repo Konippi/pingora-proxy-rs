@@ -11,7 +11,4 @@ This example focuses on how to implement a reverse proxy server using [Pingora](
 - Round-robin load balancing
 - Health checking for upstream servers
 - Rate limiting
-
-## Features to be implemented
-
-- [ ] Integration with Opentelemetry
+- Integration with Opentelemetry
