@@ -14,7 +14,7 @@ mod load_balancer;
 mod otel;
 
 fn main() {
-    let _otel_handle = OtelService::init();
+    let otel_service = background_service("opentelemetry", OtelService);
 
     let mut server = Server::new(None).expect("Failed to create server");
     server.bootstrap();
@@ -32,8 +32,11 @@ fn main() {
         http_proxy_service(&server.configuration, LB(health_check_task));
     proxy_service.add_tcp(CONFIG.lb_tcp_listening_endpoint);
 
-    let services: Vec<Box<dyn Service>> =
-        vec![Box::new(health_check_service), Box::new(proxy_service)];
+    let services: Vec<Box<dyn Service>> = vec![
+        Box::new(otel_service),
+        Box::new(health_check_service),
+        Box::new(proxy_service),
+    ];
     server.add_services(services);
     server.run_forever();
 }

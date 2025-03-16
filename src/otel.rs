@@ -1,3 +1,4 @@
+use async_trait::async_trait;
 use opentelemetry::{
     KeyValue,
     global::{self},
@@ -17,6 +18,7 @@ use opentelemetry_semantic_conventions::{
     SCHEMA_URL,
     resource::{SERVICE_NAME, SERVICE_VERSION},
 };
+use pingora::{server::ShutdownWatch, services::background::BackgroundService};
 use tracing_opentelemetry::{MetricsLayer, OpenTelemetryLayer};
 use tracing_subscriber::{
     EnvFilter, Layer, Registry,
@@ -36,6 +38,8 @@ pub struct OtelGuard {
 
 impl Drop for OtelGuard {
     fn drop(&mut self) {
+        tracing::info!("Shutting down OpenTelemetry providers...");
+
         let results = vec![
             self.logger_provider
                 .shutdown()
@@ -63,60 +67,63 @@ impl Drop for OtelGuard {
 
 pub struct OtelService;
 
-impl OtelService {
-    /// Initialize the OpenTelemetry instrumentation in a separate thread.
-    pub fn init() -> std::thread::JoinHandle<()> {
+#[async_trait]
+impl BackgroundService for OtelService {
+    async fn start(&self, mut shutdown: ShutdownWatch) {
         std::thread::spawn(|| {
             let rt = tokio::runtime::Runtime::new().unwrap();
             rt.block_on(async move {
-                match OtelService.start_instrument() {
+                match start_instrument() {
                     Ok(otel_guard) => {
                         let _otel_guard = std::sync::Arc::new(otel_guard);
                         tracing::info!("OpenTelemetry instrumentation started in separate thread.");
-                        std::future::pending::<()>().await;
+
+                        if let Err(e) = shutdown.changed().await {
+                            tracing::error!("Failed to wait for shutdown: {:#}", e);
+                        }
                     }
                     Err(e) => {
                         tracing::error!("Failed to start OpenTelemetry instrumentation: {:#}", e);
                     }
                 }
             });
-        })
+        });
     }
+}
 
-    /// Start the OpenTelemetry instrumentation.
-    pub fn start_instrument(&self) -> anyhow::Result<OtelGuard> {
-        let resource = build_resource();
+/// Start the OpenTelemetry instrumentation.
+fn start_instrument() -> anyhow::Result<OtelGuard> {
+    let resource = build_resource();
 
-        let fmt_layer = build_fmt_layer();
+    let fmt_layer = build_fmt_layer();
 
-        let logger_provider = build_logger_provider(&resource)?;
-        let logger_layer = OpenTelemetryTracingBridge::new(&logger_provider)
-            .with_filter(
-                EnvFilter::try_from_default_env()
-                    .or_else(|_| EnvFilter::try_new("info"))?,
-            );
+    let logger_provider = build_logger_provider(&resource)?;
+    let logger_layer = OpenTelemetryTracingBridge::new(&logger_provider)
+        .with_filter(
+            EnvFilter::try_from_default_env()
+                .or_else(|_| EnvFilter::try_new("info"))?,
+        );
 
-        let tracer_provider = build_tracer_provider(&resource)?;
-        let tracer =
-            tracer_provider.tracer(format!("{}-tracer", CONFIG.package_name));
-        let tracer_layer = OpenTelemetryLayer::new(tracer);
+    let tracer_provider = build_tracer_provider(&resource)?;
+    let tracer =
+        tracer_provider.tracer(format!("{}-tracer", CONFIG.package_name));
+    let tracer_layer = OpenTelemetryLayer::new(tracer);
 
-        let metrics_provider = build_metrics_provider(&resource)?;
-        let metrics_layer = MetricsLayer::new(metrics_provider.clone());
+    let metrics_provider = build_metrics_provider(&resource)?;
+    let metrics_layer = MetricsLayer::new(metrics_provider.clone());
 
-        Registry::default()
-            .with(fmt_layer)
-            .with(logger_layer)
-            .with(tracer_layer)
-            .with(metrics_layer)
-            .try_init()?;
+    Registry::default()
+        .with(fmt_layer)
+        .with(logger_layer)
+        .with(tracer_layer)
+        .with(metrics_layer)
+        .try_init()?;
 
-        Ok(OtelGuard {
-            logger_provider,
-            tracer_provider,
-            metrics_provider,
-        })
-    }
+    Ok(OtelGuard {
+        logger_provider,
+        tracer_provider,
+        metrics_provider,
+    })
 }
 
 /// Build a resource.
